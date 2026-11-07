@@ -1,0 +1,14 @@
+services:
+  weekly-order:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: weekly-order
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - DB_PATH=/data/weeklyorder.db
+      - TZ=Europe/Amsterdam

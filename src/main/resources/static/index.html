@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Albert Heijn Wekelijkse Bestelassistent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'ah-blue':       '#00a1e1',
+            'ah-blue-dark':  '#007bb3',
+            'ah-blue-light': '#e6f6fc',
+            'ah-orange':     '#ff6e00',
+            'ah-orange-light': '#fff2e6',
+            'ah-success':    '#2e7d32',
+            'ah-success-light': '#e8f5e9',
+          },
+          boxShadow: {
+            'card':  '0 2px 8px rgba(0,0,0,0.07)',
+            'card-hover': '0 6px 20px rgba(0,0,0,0.13)',
+            'header': '0 2px 12px rgba(0,161,225,0.15)',
+          },
+          backgroundImage: {
+            'ah-gradient': 'linear-gradient(135deg, #007bb3 0%, #00a1e1 60%, #00c3ff 100%)',
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-10">
+
+  <!-- ═══════════════════════════════════════
+       HEADER — Bold gradient AH header
+  ════════════════════════════════════════ -->
+  <header class="bg-ah-gradient sticky top-0 z-50 shadow-header">
+    <div class="max-w-6xl mx-auto px-5 py-3 flex items-center justify-between flex-wrap gap-3">
+
+      <!-- Logo + Title -->
+      <div class="flex items-center gap-4">
+        <div class="bg-white text-ah-blue font-black text-2xl leading-none px-3 py-2 rounded-xl shadow-sm tracking-tight select-none">
+          ah
+        </div>
+        <div>
+          <h1 class="text-white font-bold text-lg leading-tight tracking-tight">Wekelijkse Bestelassistent</h1>
+          <p class="text-blue-100 text-xs font-medium opacity-80">Slimme weekboodschappen met Albert Heijn</p>
+        </div>
+      </div>
+
+      <!-- Status Badges -->
+      <div class="flex items-center gap-3 flex-wrap">
+        <!-- Delivery slot badge -->
+        <div id="deliverySlotBadge"
+             class="flex items-center gap-2 bg-white/20 backdrop-blur text-white text-sm font-semibold px-4 py-1.5 rounded-full border border-white/30">
+          🚚 Volgende bezorging: <strong>Dinsdag</strong>
+        </div>
+        <!-- AH auth badge — JS toggles .connected / .disconnected classes -->
+        <div class="auth-badge disconnected cursor-pointer" id="ahStatusBadge" title="Klik voor instellingen">
+          <span class="status-dot"></span>
+          <span id="ahStatusText">AH niet gekoppeld</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════
+       NAVIGATION TABS — sticky pill-style bar
+  ════════════════════════════════════════ -->
+  <nav class="tabs bg-white border-b border-slate-200 sticky top-[60px] z-40 shadow-sm">
+    <div class="nav-container max-w-6xl mx-auto px-5 flex gap-1 overflow-x-auto">
+      <button class="tab-btn active" data-tab="planner">🛒 Weekplanner</button>
+      <button class="tab-btn" data-tab="recipes">🍲 Recepten</button>
+      <button class="tab-btn" data-tab="staples">🥛 Vaste &amp; Periodieke Artikelen</button>
+      <button class="tab-btn" data-tab="settings">⚙️ AH Koppeling &amp; Lijsten</button>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════
+       MAIN CONTENT
+  ════════════════════════════════════════ -->
+  <main class="max-w-6xl mx-auto px-5 pt-7">
+
+
+    <!-- ─────────────────────────────────────
+         TAB 1: WEEKPLANNER
+    ───────────────────────────────────── -->
+    <section id="planner-tab" class="tab-content active">
+
+      <!-- Friday Bonus Banner -->
+      <div class="alert-banner">
+        <span class="text-2xl flex-shrink-0">🎉</span>
+        <div>
+          <strong>Vrijdag Bonus Update Actief:</strong> Nieuwe AH aanbiedingen zijn gescand.
+          Recepten tonen bonusvoordeel en slimme vervangers voor vaste artikelen (zoals volkoren brood) staan klaar!
+        </div>
+      </div>
+
+      <!-- Step 1: Choose Recipes -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🍲</span> Stap 1: Kies je avondmaaltijden voor deze week
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button class="btn btn-secondary btn-sm" id="btnSortBonus">
+              🔥 Sorteer op meeste Bonus
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btnOpenBulkFromPlanner">
+              + Plak receptentekst
+            </button>
+          </div>
+        </div>
+        <div class="recipe-grid" id="plannerRecipeGrid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Step 2: Weekly Staples -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🥛</span> Stap 2: Vaste wekelijkse boodschappen
+          </div>
+          <span class="badge badge-cadence">Elke week</span>
+        </div>
+
+        <div id="bonusSwapContainer"></div>
+
+        <div class="item-list" id="weeklyStaplesList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Step 3: Occasional / Smart Staples -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🧻</span> Stap 3: Periodieke artikelen (Slimme suggesties)
+          </div>
+          <span class="badge badge-bonus">Bonus Pull-Forward Actief</span>
+        </div>
+
+        <!-- 3A: Due by interval -->
+        <h4 class="text-sm font-bold text-slate-700 mt-4 mb-2 flex items-center gap-1">
+          ⏰ Nodig volgens planning <span class="text-slate-400 font-normal">(interval verstreken)</span>
+        </h4>
+        <div class="item-list mb-5" id="occasionalDueList">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- 3B: Pull-forward bonus deals -->
+        <h4 class="text-sm font-bold text-orange-700 mb-1 flex items-center gap-1">🔥 Nu in de Bonus — Naar voren halen?</h4>
+        <p class="text-xs text-slate-500 mb-3">
+          Deze artikelen zijn nog niet aan de beurt, maar staan nu met hoge korting in de Bonus folder.
+        </p>
+        <div class="item-list mb-5" id="occasionalBonusList">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- 3C: Not due yet (expandable) -->
+        <details class="group">
+          <summary class="cursor-pointer text-sm font-semibold text-slate-500 py-1.5 list-none flex items-center gap-2 hover:text-ah-blue transition-colors select-none">
+            <span class="group-open:rotate-90 transition-transform inline-block">▶</span>
+            Toon overige voorraadartikelen (nog niet nodig)
+          </summary>
+          <div class="item-list mt-3" id="occasionalNotDueList">
+            <!-- Dynamically populated -->
+          </div>
+        </details>
+      </div>
+
+      <!-- Step 4: Cart Summary -->
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🧺</span> Stap 4: Gecombineerde bestellijst <span class="font-normal text-slate-400 text-base">(ontdubbeld)</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btnRefreshCart">🔄 Ververs mandje</button>
+        </div>
+
+        <div class="item-list" id="aggregatedCartList">
+          <!-- Dynamically aggregated -->
+        </div>
+
+        <!-- Cart Summary Bar -->
+        <div class="cart-summary-bar mt-6">
+          <div class="summary-details">
+            <div class="summary-stat">
+              <span class="summary-label">Aantal artikelen</span>
+              <span class="summary-val" id="summaryItemCount">0</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-label">Geselecteerde recepten</span>
+              <span class="summary-val" id="summaryRecipeCount">0</span>
+            </div>
+            <div class="summary-stat">
+              <span class="summary-label">Geschat totaalbedrag</span>
+              <span class="summary-val highlight" id="summaryTotalCost">€ 0.00</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-large" id="btnPushToAh">
+            Bestelling naar Albert Heijn sturen 🚀
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+
+    <!-- ─────────────────────────────────────
+         TAB 2: RECIPES MANAGEMENT
+    ───────────────────────────────────── -->
+    <section id="recipes-tab" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🍲</span> Recepten Beheer
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button class="btn btn-primary" id="btnOpenBulkModal">+ Plak Tekstlijst (Bulk Import)</button>
+            <button class="btn btn-secondary" id="btnNewRecipe">+ Nieuw Recept</button>
+          </div>
+        </div>
+        <p class="text-slate-500 text-sm mb-5">
+          Hier staan al je recepten. Koppel ingrediënten aan AH producten zodat ze automatisch in je mandje geplaatst kunnen worden.
+        </p>
+        <div class="recipe-grid" id="allRecipesGrid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ─────────────────────────────────────
+         TAB 3: STAPLES & OCCASIONALS
+    ───────────────────────────────────── -->
+    <section id="staples-tab" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>🥛</span> Vaste Artikelen &amp; Periodieke Boodschappen
+          </div>
+          <button class="btn btn-primary" id="btnNewStaple">+ Nieuw Artikel Toevoegen</button>
+        </div>
+
+        <h3 class="text-base font-bold text-slate-700 mt-5 mb-1">Wekelijks Vaste Artikelen</h3>
+        <p class="text-sm text-slate-500 mb-4">
+          Deze artikelen worden altijd aan je weekplanning toegevoegd. Stel eventueel acceptabele alternatieven of een
+          zoekterm (bijv. <em>volkoren brood</em>) in voor Bonus Swaps!
+        </p>
+        <div class="item-list mb-7" id="manageWeeklyList"></div>
+
+        <h3 class="text-base font-bold text-slate-700 mb-1">Periodieke Artikelen <span class="text-slate-400 font-normal">(Voorraad / Huishouden)</span></h3>
+        <p class="text-sm text-slate-500 mb-4">
+          Artikelen zoals toiletpapier, boter of olijfolie met een instelbare herhaalfrequentie.
+        </p>
+        <div class="item-list" id="manageOccasionalList"></div>
+      </div>
+    </section>
+
+
+    <!-- ─────────────────────────────────────
+         TAB 4: SETTINGS & AH CONNECTION
+    ───────────────────────────────────── -->
+    <section id="settings-tab" class="tab-content">
+      <div class="section">
+        <div class="section-header">
+          <div class="section-title">
+            <span>⚙️</span> Albert Heijn Account Koppeling
+          </div>
+        </div>
+
+        <!-- Dynamically populated with connected/disconnected state -->
+        <div id="ahConnectionCard" class="bg-slate-50 rounded-xl border border-slate-200 p-6 mb-7">
+        </div>
+
+        <div class="section-title mt-6 mb-2">
+          <span>📋</span> Importeer Favorieten / Lijstjes uit je AH Profiel
+        </div>
+        <p class="text-sm text-slate-500 mb-5">
+          Heb je al lijstjes aangemaakt in de Albert Heijn app of op ah.nl?
+          Haal ze direct op om recepten of vaste artikelen van te maken.
+        </p>
+
+        <button class="btn btn-secondary" id="btnFetchAhLists">
+          🔄 Haal mijn AH profiellijsten op
+        </button>
+
+        <div id="ahListsContainer" class="mt-5"></div>
+      </div>
+    </section>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════
+       MODAL: Bulk Recipe Import
+  ════════════════════════════════════════ -->
+  <div class="modal-overlay" id="bulkImportModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="text-base font-bold text-slate-800">Recepten Importeren uit Tekst</h3>
+        <button class="close-btn" data-close="bulkImportModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-sm text-slate-500 mb-4">
+          Plak hier je recepten. Je syntax wordt automatisch herkend:<br>
+          <code class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs">Receptnaam (ingrediënt1, ingrediënt2) -- optionele notities</code>
+        </p>
+
+        <div class="form-group">
+          <textarea class="form-control" id="bulkText" rows="9"
+            placeholder="AVG (spruiten, aardappels, spekjes, appel) -- Diepvries: Speklap bbq
+Flespompoen tajine pagina 97 (Flespompoen, knoflook, rozemarijn, couscous)
+Quesadillas met bloemkool (bloemkool, Wraps, kaas, ui, paprika, champignons)"></textarea>
+        </div>
+
+        <label class="text-sm flex items-center gap-2 cursor-pointer text-slate-600 select-none">
+          <input type="checkbox" id="chkAutoMatch" checked class="accent-ah-blue w-4 h-4">
+          Automatisch zoeken naar bijpassende AH producten
+        </label>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="bulkImportModal">Annuleren</button>
+        <button class="btn btn-primary" id="btnSubmitBulk">Importeer Recepten</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════
+       MODAL: AH Product Search & Match
+  ════════════════════════════════════════ -->
+  <div class="modal-overlay" id="ahSearchModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="text-base font-bold text-slate-800" id="ahSearchModalTitle">Koppel AH Product</h3>
+        <button class="close-btn" data-close="ahSearchModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="flex gap-2 mb-5">
+          <input type="text" class="form-control" id="ahSearchInput"
+                 placeholder="Zoek in AH catalogus (bijv. volkoren brood, spruiten)...">
+          <button class="btn btn-primary flex-shrink-0" id="btnExecuteAhSearch">Zoeken</button>
+        </div>
+
+        <div id="ahSearchResults" class="max-h-80 overflow-y-auto">
+          <!-- Product results -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close="ahSearchModal">Sluiten</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
